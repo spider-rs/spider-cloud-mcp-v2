@@ -115,7 +115,7 @@ Requires an [AI subscription](https://spider.cloud/ai/pricing).
 
 ### Browser Automation Tools (9)
 
-Direct browser control via CDP. Browsers run in Spider's cloud with anti-bot protection, proxy rotation, and automatic stealth escalation. Compatible with Puppeteer and Playwright workflows.
+Direct browser control via spider-browser. Browsers run in Spider's cloud with smart retry, browser switching, anti-bot protection, proxy rotation, and automatic stealth escalation. Supports CDP and BiDi protocols.
 
 | Tool | Description |
 |---|---|
@@ -168,14 +168,14 @@ spider_ai_scrape: {
 Uses `spider_browser_*` tools to drive a remote browser with full anti-bot protection.
 
 ```
-1. spider_browser_open: { mode: "cua" }
+1. spider_browser_open: { browser: "auto" }
 2. spider_browser_navigate: { url: "https://app.example.com/login" }
 3. spider_browser_fill: { selector: "input[name='email']", value: "user@example.com" }
 4. spider_browser_fill: { selector: "input[name='password']", value: "..." }
 5. spider_browser_click: { selector: "button[type='submit']" }
 6. spider_browser_wait_for: { navigation: true }
 7. spider_browser_navigate: { url: "https://app.example.com/reports/monthly" }
-8. spider_browser_screenshot: { full_page: true }
+8. spider_browser_screenshot: {}
 9. spider_browser_close: {}
 ```
 
