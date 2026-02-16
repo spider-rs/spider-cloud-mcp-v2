@@ -1,23 +1,22 @@
 /**
  * Browser session manager.
  *
- * Manages remote browser sessions via puppeteer-core connecting to
- * browser.spider.cloud's CDP WebSocket endpoint. Handles session lifecycle,
+ * Manages remote browser sessions via spider-browser connecting to
+ * Spider's pre-warmed browser fleet. Handles session lifecycle,
  * idle timeout cleanup, and graceful shutdown.
  *
- * Public connection endpoint: wss://browser.spider.cloud/v1/browser
- * Compatible with Puppeteer, Playwright, and any CDP client.
+ * spider-browser provides smart retry with browser switching, stealth
+ * auto-escalation, interstitial handling, and cross-browser support
+ * (CDP + BiDi) out of the box.
  */
 
-import puppeteer, { type Browser, type Page } from "puppeteer-core";
+import { SpiderBrowser, type SpiderPage } from "spider-browser";
 
-const BROWSER_WS_BASE = "wss://browser.spider.cloud/v1/browser";
 const SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes idle
 const MAX_SESSIONS = 5;
 
 interface Session {
-  browser: Browser;
-  page: Page;
+  browser: SpiderBrowser;
   lastAccess: number;
 }
 
@@ -43,8 +42,9 @@ function startCleanup(): void {
 /**
  * Open a new remote browser session.
  *
- * Connects to browser.spider.cloud via CDP WebSocket. The remote browser
- * runs in the cloud with anti-bot protection and proxy rotation built in.
+ * Connects to Spider's browser fleet via spider-browser. The remote browser
+ * runs in the cloud with smart retry, stealth escalation, and cross-browser
+ * support built in.
  *
  * @returns A unique session ID for subsequent browser tool calls.
  */
@@ -53,8 +53,6 @@ export async function openSession(
   options?: {
     browser?: string;
     stealth?: number;
-    country?: string;
-    mode?: string;
   }
 ): Promise<{ sessionId: string; browserType: string }> {
   if (sessions.size >= MAX_SESSIONS) {
@@ -64,42 +62,29 @@ export async function openSession(
     );
   }
 
-  const params = new URLSearchParams({ token: apiKey });
-  if (options?.browser) params.set("browser", options.browser);
-  if (options?.stealth !== undefined) params.set("s", String(options.stealth));
-  if (options?.country) params.set("country", options.country);
-  if (options?.mode) params.set("mode", options.mode);
-
-  const wsUrl = `${BROWSER_WS_BASE}?${params}`;
-
-  const browser = await puppeteer.connect({
-    browserWSEndpoint: wsUrl,
-    defaultViewport: null,
+  const browser = new SpiderBrowser({
+    apiKey,
+    browser: options?.browser as any,
+    stealth: options?.stealth,
+    logLevel: "silent", // prevent stdout corruption on MCP stdio transport
   });
-
-  const pages = await browser.pages();
-  const page = pages[0] ?? (await browser.newPage());
+  await browser.init();
 
   const sessionId = crypto.randomUUID();
-  sessions.set(sessionId, { browser, page, lastAccess: Date.now() });
-
-  // Auto-cleanup on unexpected disconnect
-  browser.on("disconnected", () => {
-    sessions.delete(sessionId);
-  });
+  sessions.set(sessionId, { browser, lastAccess: Date.now() });
 
   startCleanup();
 
   return {
     sessionId,
-    browserType: options?.browser ?? "chrome",
+    browserType: options?.browser ?? "auto",
   };
 }
 
 /**
  * Get an active session's page. Throws if the session has expired or been closed.
  */
-export function getPage(sessionId: string): Page {
+export function getPage(sessionId: string): SpiderPage {
   const session = sessions.get(sessionId);
   if (!session) {
     throw new Error(
@@ -108,7 +93,22 @@ export function getPage(sessionId: string): Page {
     );
   }
   session.lastAccess = Date.now();
-  return session.page;
+  return session.browser.page;
+}
+
+/**
+ * Get an active session's SpiderBrowser instance. Used for smart retry via browser.goto().
+ */
+export function getBrowser(sessionId: string): SpiderBrowser {
+  const session = sessions.get(sessionId);
+  if (!session) {
+    throw new Error(
+      "Browser session not found. It may have expired (5 min idle timeout) or been closed. " +
+        "Open a new session with spider_browser_open."
+    );
+  }
+  session.lastAccess = Date.now();
+  return session.browser;
 }
 
 /**

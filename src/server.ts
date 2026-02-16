@@ -17,6 +17,7 @@ import { apiRequest, formatResult, getApiKey } from "./api.js";
 import {
   openSession,
   getPage,
+  getBrowser,
   closeSession,
   getSessionCount,
 } from "./browser.js";
@@ -340,7 +341,7 @@ function imageResult(
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "spider-cloud-mcp",
-    version: "2.0.0",
+    version: "2.1.0",
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -793,23 +794,15 @@ export function createServer(): McpServer {
       "Always close sessions with spider_browser_close when done to avoid unnecessary charges.",
     {
       browser: z
-        .enum(["chrome", "chrome-new", "firefox"])
+        .enum(["chrome", "chrome-new", "firefox", "auto"])
         .optional()
-        .describe("Browser engine. chrome (shared, fast), chrome-new (dedicated), firefox. Default: chrome"),
+        .describe("Browser engine. auto (recommended), chrome, chrome-new (dedicated), firefox. Default: auto"),
       stealth: z
         .number()
         .min(0)
         .max(3)
         .optional()
         .describe("Stealth/proxy level 0-3. 0=auto, 1=standard, 2=residential, 3=premium. Default: 0"),
-      country: z
-        .string()
-        .optional()
-        .describe("ISO country code for geo-located proxy (e.g. 'us', 'gb')"),
-      mode: z
-        .enum(["scraping", "cua"])
-        .optional()
-        .describe("scraping (headless, fast) or cua (full rendering for screenshots/video). Default: scraping"),
     },
     async (params) => {
       try {
@@ -817,8 +810,6 @@ export function createServer(): McpServer {
         const { sessionId, browserType } = await openSession(apiKey, {
           browser: params.browser,
           stealth: params.stealth,
-          country: params.country,
-          mode: params.mode,
         });
         return textResult({
           session_id: sessionId,
@@ -840,27 +831,14 @@ export function createServer(): McpServer {
         .string()
         .describe("Session ID from spider_browser_open"),
       url: z.string().describe("URL to navigate to"),
-      wait_until: z
-        .enum(["load", "domcontentloaded", "networkidle0", "networkidle2"])
-        .optional()
-        .describe(
-          "When to consider navigation complete. " +
-            "load (default), domcontentloaded (faster), networkidle0 (no requests for 500ms), networkidle2 (max 2 requests)"
-        ),
-      timeout: z
-        .number()
-        .optional()
-        .describe("Navigation timeout in ms. Default: 30000"),
     },
-    async ({ session_id, url, wait_until, timeout }) => {
+    async ({ session_id, url }) => {
       try {
-        const page = getPage(session_id);
-        await page.goto(url, {
-          waitUntil: wait_until ?? "load",
-          timeout: timeout ?? 30_000,
-        });
+        const browser = getBrowser(session_id);
+        await browser.goto(url);
+        const page = browser.page;
         return textResult({
-          url: page.url(),
+          url: await page.url(),
           title: await page.title(),
         });
       } catch (error) {
@@ -889,13 +867,13 @@ export function createServer(): McpServer {
     async ({ session_id, selector, timeout }) => {
       try {
         const page = getPage(session_id);
-        await page.waitForSelector(selector, { timeout: timeout ?? 10_000 });
+        await page.waitForSelector(selector, timeout ?? 10_000);
         await page.click(selector);
         // Brief pause for any navigation or DOM updates triggered by the click
         await new Promise((r) => setTimeout(r, 500));
         return textResult({
           clicked: selector,
-          current_url: page.url(),
+          current_url: await page.url(),
         });
       } catch (error) {
         return errorResult(error);
@@ -923,10 +901,8 @@ export function createServer(): McpServer {
     async ({ session_id, selector, value, timeout }) => {
       try {
         const page = getPage(session_id);
-        await page.waitForSelector(selector, { timeout: timeout ?? 10_000 });
-        // Triple-click to select all existing text, then type to replace
-        await page.click(selector, { count: 3 });
-        await page.type(selector, value);
+        await page.waitForSelector(selector, timeout ?? 10_000);
+        await page.fill(selector, value);
         return textResult({
           filled: selector,
           value_length: value.length,
@@ -945,35 +921,11 @@ export function createServer(): McpServer {
       session_id: z
         .string()
         .describe("Session ID from spider_browser_open"),
-      full_page: z
-        .boolean()
-        .optional()
-        .describe("Capture the full scrollable page. Default: false (viewport only)"),
-      selector: z
-        .string()
-        .optional()
-        .describe("CSS selector to screenshot a specific element instead of the full page"),
     },
-    async ({ session_id, full_page, selector }) => {
+    async ({ session_id }) => {
       try {
         const page = getPage(session_id);
-
-        let base64: string;
-        if (selector) {
-          const element = await page.waitForSelector(selector, {
-            timeout: 10_000,
-          });
-          if (!element) throw new Error(`Element not found: ${selector}`);
-          const buffer = await element.screenshot({ encoding: "base64" });
-          base64 = typeof buffer === "string" ? buffer : Buffer.from(buffer).toString("base64");
-        } else {
-          const buffer = await page.screenshot({
-            fullPage: full_page ?? false,
-            encoding: "base64",
-          });
-          base64 = typeof buffer === "string" ? buffer : Buffer.from(buffer).toString("base64");
-        }
-
+        const base64 = await page.screenshot();
         return imageResult(base64, "image/png");
       } catch (error) {
         return errorResult(error);
@@ -999,15 +951,15 @@ export function createServer(): McpServer {
 
         let content: string;
         if (format === "text") {
-          content = await page.evaluate(
-            () => document.body.innerText || document.body.textContent || ""
-          );
+          content = (await page.evaluate(
+            'document.body.innerText || document.body.textContent || ""'
+          )) as string;
         } else {
           content = await page.content();
         }
 
         return textResult({
-          url: page.url(),
+          url: await page.url(),
           title: await page.title(),
           content,
           length: content.length,
@@ -1071,21 +1023,21 @@ export function createServer(): McpServer {
         const ms = timeout ?? 30_000;
 
         if (selector) {
-          await page.waitForSelector(selector, { timeout: ms });
+          await page.waitForSelector(selector, ms);
           return textResult({ waited_for: `selector: ${selector}` });
         }
 
         if (navigation) {
-          await page.waitForNavigation({ timeout: ms });
+          await page.waitForNavigation(ms);
           return textResult({
             waited_for: "navigation",
-            url: page.url(),
+            url: await page.url(),
             title: await page.title(),
           });
         }
 
-        // Default: wait for network idle (no requests for 500ms)
-        await page.waitForNetworkIdle({ timeout: ms });
+        // Default: wait for network idle + DOM stability
+        await page.waitForNetworkIdle(ms);
         return textResult({ waited_for: "network_idle" });
       } catch (error) {
         return errorResult(error);

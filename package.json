@@ -1,6 +1,6 @@
 {
   "name": "spider-cloud-mcp",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Spider MCP server — crawl, scrape, search, and automate browsers at scale. 100K+ pages/sec with anti-bot bypass.",
   "type": "module",
   "main": "dist/index.js",
@@ -11,6 +11,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -44,12 +46,13 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1",
-    "puppeteer-core": "^24.2.0",
+    "spider-browser": "^0.1.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "typescript": "^5.7.3",
-    "@types/node": "^22.13.4"
+    "@types/node": "^22.13.4",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=18"
