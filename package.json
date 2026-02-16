@@ -1,6 +1,6 @@
 {
   "name": "spider-cloud-mcp",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Spider MCP server — crawl, scrape, search, and automate browsers at scale. 100K+ pages/sec with anti-bot bypass.",
   "type": "module",
   "main": "dist/index.js",
