@@ -1,0 +1,57 @@
+{
+  "name": "spider-cloud-mcp",
+  "version": "2.0.0",
+  "description": "Spider MCP server — crawl, scrape, search, and automate browsers at scale. 100K+ pages/sec with anti-bot bypass.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "spider-cloud-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "spider",
+    "web-scraping",
+    "web-crawling",
+    "browser-automation",
+    "ai",
+    "llm",
+    "rag",
+    "ai-agents",
+    "claude",
+    "data-extraction"
+  ],
+  "author": "Spider <support@spider.cloud>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/spider-rs/spider-mcp.git"
+  },
+  "homepage": "https://spider.cloud/mcp",
+  "bugs": {
+    "url": "https://github.com/spider-rs/spider-mcp/issues"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "puppeteer-core": "^24.2.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.13.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
