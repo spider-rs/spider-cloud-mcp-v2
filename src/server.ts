@@ -95,7 +95,13 @@ const baseParams = {
     .record(z.unknown())
     .optional()
     .describe(
-      "CSS/XPath selector mapping for structured extraction per URL path"
+      "CSS/XPath selectors for structured extraction. Shape: { '<url-path>': [{ name, selectors: [...] }] }. '/' matches all paths. Results returned under css_extracted."
+    ),
+  wait_for: z
+    .record(z.unknown())
+    .optional()
+    .describe(
+      "Chrome-only readiness gate (request: 'chrome' or 'smart'). Object with any of: selector ({selector, timeout}), idle_network ({timeout}), idle_network0, almost_idle_network0, dom ({selector, timeout}), delay ({timeout}), page_navigations (bool). Each timeout is a Rust Duration: { secs, nanos }."
     ),
   filter_output_images: z
     .boolean()
