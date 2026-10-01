@@ -1,6 +1,6 @@
 # Spider MCP Server
 
-The fastest web crawling, scraping, and browser automation server for AI agents. Gives Claude direct access to the web through 22 tools — crawl sites at 100K+ pages/sec, extract structured data with AI, and control remote browsers with built-in anti-bot bypass.
+The fastest web crawling, scraping, and browser automation server for AI agents. Gives Claude direct access to the web through 21 tools — crawl sites at 100K+ pages/sec, extract structured data with AI, and control remote browsers with built-in anti-bot bypass.
 
 ## Why Spider
 
@@ -84,7 +84,7 @@ Add to `~/.codeium/windsurf/mcp_config.json`:
 
 ## Tools
 
-### Core Tools (8)
+### Core Tools (7)
 
 These work on pay-per-use credits with no subscription required.
 
@@ -95,7 +95,6 @@ These work on pay-per-use credits with no subscription required.
 | `spider_search` | Search the web. Optionally fetch full page content from results. |
 | `spider_links` | Extract all links from a page without fetching content. |
 | `spider_screenshot` | Capture a page screenshot as base64 PNG. |
-| `spider_unblocker` | Access bot-protected content with advanced anti-bot bypass. |
 | `spider_transform` | Convert HTML to markdown or text without making web requests. |
 | `spider_get_credits` | Check your API credit balance. |
 

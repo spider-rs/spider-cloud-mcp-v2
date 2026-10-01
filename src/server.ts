@@ -1,8 +1,8 @@
 /**
  * Spider MCP Server — tool registrations.
  *
- * 22 tools across three categories:
- *   - Core (8):    crawl, scrape, search, links, screenshot, unblocker, transform, credits
+ * 21 tools across three categories:
+ *   - Core (7):    crawl, scrape, search, links, screenshot, transform, credits
  *   - AI (5):      ai_crawl, ai_scrape, ai_search, ai_browser, ai_links
  *   - Browser (9): open, navigate, click, fill, screenshot, content, evaluate, wait_for, close
  *
@@ -50,7 +50,7 @@ const viewportSchema = z
   .describe("Device viewport settings");
 
 /**
- * Parameters shared across crawl, scrape, links, unblocker, and screenshot endpoints.
+ * Parameters shared across crawl, scrape, links, and screenshot endpoints.
  * Documented at https://spider.cloud/docs/api
  */
 const baseParams = {
@@ -131,6 +131,10 @@ const baseParams = {
     .boolean()
     .optional()
     .describe("Strip unwanted HTML attributes (class, style, etc.)"),
+  stealth: z
+    .boolean()
+    .optional()
+    .describe("Use stealth mode for bot-protected pages"),
   proxy_enabled: z
     .boolean()
     .optional()
@@ -308,7 +312,7 @@ const screenshotExtraParams = {
 
 const crawlParams = { ...baseParams, ...crawlOnlyParams };
 
-// Scrape/unblocker: base params + screenshot options (no limit/depth/delay)
+// Scrape: base params + screenshot options (no limit/depth/delay)
 const scrapeParams = { ...baseParams, ...screenshotExtraParams };
 
 // ─── Tool Result Helpers ────────────────────────────────────────────────────
@@ -347,11 +351,11 @@ function imageResult(
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "spider-cloud-mcp",
-    version: "2.1.0",
+    version: "3.0.0",
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CORE TOOLS (8)
+  // CORE TOOLS (7)
   // Public Spider API — no subscription required
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -527,27 +531,6 @@ export function createServer(): McpServer {
         const data = await apiRequest(
           "POST",
           "/screenshot",
-          params as Record<string, unknown>,
-          { stream: true }
-        );
-        return textResult(data);
-      } catch (error) {
-        return errorResult(error);
-      }
-    }
-  );
-
-  server.tool(
-    "spider_unblocker",
-    "Access content from bot-protected websites. " +
-      "Uses advanced anti-bot bypass with fingerprinting and proxy rotation. " +
-      "Costs 10-40 extra credits per successful unblock on top of base scrape cost.",
-    scrapeParams,
-    async (params) => {
-      try {
-        const data = await apiRequest(
-          "POST",
-          "/unblocker",
           params as Record<string, unknown>,
           { stream: true }
         );

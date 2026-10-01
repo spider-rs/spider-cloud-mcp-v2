@@ -7,7 +7,7 @@ How to pick the right Spider tool for a task. Use this as a decision guide when 
 **Need web content?**
 - One page -> `spider_scrape`
 - Multiple pages / follow links -> `spider_crawl`
-- Behind bot protection -> `spider_unblocker`
+- Behind bot protection -> `spider_scrape` with `stealth: true`
 - Already have HTML locally -> `spider_transform`
 
 **Need to find something?**
@@ -61,9 +61,6 @@ Extract links from a page without fetching their content. Use to discover URLs b
 
 ### spider_screenshot
 Server-side page screenshot via the REST API. Returns base64 PNG. Supports full-page capture and custom viewports.
-
-### spider_unblocker
-Access bot-protected sites. Uses advanced fingerprinting and proxy rotation. Costs 10-40 extra credits on top of base scrape.
 
 ### spider_transform
 Convert HTML to markdown/text without making web requests. Use when you already have HTML content.
@@ -167,4 +164,4 @@ spider_get_credits -> spider_crawl with limit
 ```
 
 ### Bypass bot protection
-Try `spider_scrape` first. If blocked, escalate to `spider_unblocker`. For interactive sites, use browser tools with `stealth: 2` or `stealth: 3`.
+Try `spider_scrape` first. If blocked, retry it with `stealth: true` and `proxy_enabled: true`. For interactive sites, use browser tools with `stealth: 2` or `stealth: 3`.
