@@ -33,11 +33,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/spider-rs/spider-mcp.git"
+    "url": "git+https://github.com/spider-rs/spider-cloud-mcp-v2.git"
   },
   "homepage": "https://spider.cloud/mcp",
   "bugs": {
-    "url": "https://github.com/spider-rs/spider-mcp/issues"
+    "url": "https://github.com/spider-rs/spider-cloud-mcp-v2/issues"
   },
   "files": [
     "dist",
