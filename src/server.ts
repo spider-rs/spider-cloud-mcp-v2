@@ -315,6 +315,51 @@ const crawlParams = { ...baseParams, ...crawlOnlyParams };
 // Scrape: base params + screenshot options (no limit/depth/delay)
 const scrapeParams = { ...baseParams, ...screenshotExtraParams };
 
+// ─── Tool Annotations ───────────────────────────────────────────────────────
+//
+// One constant per behavior class. Clients use these to decide which calls
+// need a confirmation from the user.
+
+/** Fetches public pages. Reads, never writes, reaches any site. */
+const WEB_READ = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
+} as const;
+
+/** A conversion or an account lookup that touches nothing outside Spider. */
+const LOCAL_READ = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+} as const;
+
+/** Reads the state of a live browser session without changing it. */
+const BROWSER_READ = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
+} as const;
+
+/** Opens, moves or closes a browser session. Changes no page content. */
+const BROWSER_SESSION = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: true,
+} as const;
+
+/** Clicks, types or runs script on a page, which can submit forms on a site. */
+const BROWSER_ACT = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: false,
+  openWorldHint: true,
+} as const;
+
 // ─── Tool Result Helpers ────────────────────────────────────────────────────
 
 type ToolContent =
@@ -365,6 +410,7 @@ export function createServer(): McpServer {
       "Follows links up to the specified depth/limit. Returns content in markdown, HTML, text, or other formats. " +
       "Powered by Spider — crawls 100K+ pages/sec with smart JS rendering.",
     crawlParams,
+    WEB_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -386,6 +432,7 @@ export function createServer(): McpServer {
       "No link following — fetches and processes one URL. Faster and cheaper than crawling. " +
       "Supports all output formats and optional screenshot capture.",
     scrapeParams,
+    WEB_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -457,6 +504,7 @@ export function createServer(): McpServer {
       proxy_enabled: z.boolean().optional().describe("Enable premium proxies"),
       cookies: z.string().optional().describe("HTTP cookies"),
     },
+    WEB_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -482,6 +530,7 @@ export function createServer(): McpServer {
       return_format: returnFormatSchema,
       request: requestTypeSchema,
     },
+    WEB_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -526,6 +575,7 @@ export function createServer(): McpServer {
       timezone: z.string().optional().describe("Timezone"),
       timeout: z.number().optional().describe("Timeout in ms"),
     },
+    WEB_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -571,6 +621,7 @@ export function createServer(): McpServer {
         .optional()
         .describe("Clean output for AI consumption (strip nav, footers)"),
     },
+    LOCAL_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -591,6 +642,7 @@ export function createServer(): McpServer {
     "Check your available Spider API credit balance. " +
       "Returns the number of credits remaining on your account.",
     {},
+    LOCAL_READ,
     async () => {
       try {
         const data = await apiRequest("GET", "/data/credits");
@@ -625,6 +677,7 @@ export function createServer(): McpServer {
       proxy_enabled: z.boolean().optional().describe("Enable premium proxies"),
       cookies: z.string().optional().describe("HTTP cookies"),
     },
+    WEB_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -655,6 +708,7 @@ export function createServer(): McpServer {
       proxy_enabled: z.boolean().optional().describe("Enable premium proxies"),
       cookies: z.string().optional().describe("HTTP cookies"),
     },
+    WEB_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -695,6 +749,7 @@ export function createServer(): McpServer {
       tbs: z.string().optional().describe("Time range filter"),
       return_format: returnFormatSchema,
     },
+    WEB_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -724,6 +779,7 @@ export function createServer(): McpServer {
       proxy_enabled: z.boolean().optional().describe("Enable premium proxies"),
       cookies: z.string().optional().describe("HTTP cookies"),
     },
+    BROWSER_ACT,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -753,6 +809,7 @@ export function createServer(): McpServer {
       return_format: returnFormatSchema,
       request: requestTypeSchema,
     },
+    WEB_READ,
     async (params) => {
       try {
         const data = await apiRequest(
@@ -793,6 +850,7 @@ export function createServer(): McpServer {
         .optional()
         .describe("Stealth/proxy level 0-3. 0=auto, 1=standard, 2=residential, 3=premium. Default: 0"),
     },
+    BROWSER_SESSION,
     async (params) => {
       try {
         const apiKey = getApiKey();
@@ -821,6 +879,7 @@ export function createServer(): McpServer {
         .describe("Session ID from spider_browser_open"),
       url: z.string().describe("URL to navigate to"),
     },
+    BROWSER_SESSION,
     async ({ session_id, url }) => {
       try {
         const browser = getBrowser(session_id);
@@ -853,6 +912,7 @@ export function createServer(): McpServer {
         .optional()
         .describe("Max time to wait for element in ms. Default: 10000"),
     },
+    BROWSER_ACT,
     async ({ session_id, selector, timeout }) => {
       try {
         const page = getPage(session_id);
@@ -887,6 +947,7 @@ export function createServer(): McpServer {
         .optional()
         .describe("Max time to wait for element in ms. Default: 10000"),
     },
+    BROWSER_ACT,
     async ({ session_id, selector, value, timeout }) => {
       try {
         const page = getPage(session_id);
@@ -911,6 +972,7 @@ export function createServer(): McpServer {
         .string()
         .describe("Session ID from spider_browser_open"),
     },
+    BROWSER_READ,
     async ({ session_id }) => {
       try {
         const page = getPage(session_id);
@@ -934,6 +996,7 @@ export function createServer(): McpServer {
         .optional()
         .describe("Content format: html (full DOM) or text (visible text only). Default: html"),
     },
+    BROWSER_READ,
     async ({ session_id, format }) => {
       try {
         const page = getPage(session_id);
@@ -975,6 +1038,7 @@ export function createServer(): McpServer {
             "Use a function wrapper for multi-line code: (function() { ... })()"
         ),
     },
+    BROWSER_ACT,
     async ({ session_id, expression }) => {
       try {
         const page = getPage(session_id);
@@ -1006,6 +1070,7 @@ export function createServer(): McpServer {
         .optional()
         .describe("Max wait time in ms. Default: 30000"),
     },
+    BROWSER_READ,
     async ({ session_id, selector, navigation, timeout }) => {
       try {
         const page = getPage(session_id);
@@ -1043,6 +1108,7 @@ export function createServer(): McpServer {
         .string()
         .describe("Session ID from spider_browser_open"),
     },
+    BROWSER_SESSION,
     async ({ session_id }) => {
       try {
         await closeSession(session_id);
