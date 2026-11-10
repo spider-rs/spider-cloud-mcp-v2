@@ -1,0 +1,32 @@
+name: Publish to npm
+
+# Tag vX.Y.Z (matching package.json) to publish spider-cloud-mcp.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          registry-url: "https://registry.npmjs.org"
+      - name: Check the tag matches the version
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          have="$(node -p "require('./package.json').version")"
+          test "$want" = "$have" || { echo "tag $want != package.json $have"; exit 1; }
+      - run: npm ci
+      - run: npm run build
+      - run: npx vitest run
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
